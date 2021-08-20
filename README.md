@@ -32,7 +32,7 @@ prof = generate_profile(3, 4) # prof is a Profile object with 3 candidate and 4 
 prof = generate_profile(3, 4, probmod = "IAC") # prof is a Profile object with 3 candidate and 4 voters
 ```
 
-2. Import and use voting methods (see voting/voting_methods.py for implementations and 02-VotingMethods.ipynb for an overview): 
+Import and use voting methods (see voting/voting_methods.py for implementations and 02-VotingMethods.ipynb for an overview): 
 
 ```python
 from voting.profiles import Profile
@@ -89,6 +89,4 @@ All the code is written in Python 3.
 - [tqdm.notebook](https://github.com/tqdm/tqdm)
 <!-- #endregion -->
 
-```python
-
-```
+ 
