@@ -1,7 +1,7 @@
 
 # Stable Voting
 
-README.md for the code used in the paper [Stable Voting](https://arxiv.org/abs/2108.00542).  
+README.md for the code used in the paper [Stable Voting](https://arxiv.org/abs/2108.00542) by W. Holliday and E. Pacuit.
 
 ## Where to start
 
