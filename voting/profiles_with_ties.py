@@ -145,8 +145,8 @@ class ProfileWithTies(object):
         # the number of voters that rank c1 strictly over c2 minus the number
         #   that rank c2 strictly over c2.
         
-        if self.support(c1,c2) > 0 and self.support(c2, c1): 
-            return self.support(c1,c2) / self.support(c2, c1)
+        if self.support(c1, c2) > 0 and self.support(c2, c1): 
+            return self.support(c1, c2) / self.support(c2, c1)
         elif self.support(c1, c2) > 0 and self.support(c2, c1) == 0:
             return float(self.num_voters + self.support(c1, c2))
         elif self.support(c1, c2) == 0 and self.support(c2, c1) > 0:
@@ -187,22 +187,35 @@ class ProfileWithTies(object):
     def margin_graph(self, weight='margin'): 
         # generate the margin graph (i.e., the weighted majority graph)
     
-        weight_func = self.margin if weight == 'margin' else self.ratio
-        weight_unit = 0 if weight == 'margin' else 1
+        if weight == 'margin': 
+            weight_func = self.margin
+        elif weight == 'support': 
+            weight_func = self.support
+        else: 
+            weight_func = self.ratio
+
+        weight_unit = 0 if (weight == 'margin' or weight=='support') else 1
         mg = nx.DiGraph()
         mg.add_nodes_from(self.candidates)
         mg.add_weighted_edges_from([(c1, c2, weight_func(c1,c2))
                                     for c1 in self.candidates 
                                     for c2 in self.candidates if ((c1 != c2) and (weight_func(c1, c2) > weight_unit))])
         return mg
+        
     def display_margin_graph(self, cmap=None, weight = 'margin'):
         # display the margin graph
         
         # create the margin graph.   The reason not to call the above method margin_graph 
         # is that we may want to apply the cmap to the names of the candidates
         
-        weight_func = self.margin if weight == 'margin' else self.ratio
-        weight_unit = 0 if weight == 'margin' else 1
+        if weight == 'margin': 
+            weight_func = self.margin
+        elif weight == 'support': 
+            weight_func = self.support
+        else: 
+            weight_func = self.ratio
+
+        weight_unit = 0 if (weight == 'margin' or weight=='support') else 1
         cmap = cmap if cmap is not None else self.cmap
         
         mg = nx.DiGraph()
