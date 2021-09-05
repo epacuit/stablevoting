@@ -2089,10 +2089,12 @@ def blacks(profile):
     return winners
 
 
-@vm_name("Stable Voting")
-def stable_voting(profile, curr_cands = None): 
-    """Stable Voting - implementation of the voting method from https://arxiv.org/abs/2108.00542
-    """
+def stable_voting_(profile, curr_cands = None, mem_sv_winners = {}): 
+    '''
+    Determine the Stable Voting winners for the profile while keeping track 
+    of the winners in any subprofiles checked during computation. 
+    
+    '''
     
     # curr_cands is the set of candidates who have not been removed
     curr_cands = curr_cands if not curr_cands is None else profile.candidates
@@ -2101,26 +2103,32 @@ def stable_voting(profile, curr_cands = None):
     matches = [(a, b) for a in curr_cands for b in curr_cands 
                if a != b]
     margins = list(set([profile.margin(a, b) for a,b in matches]))
-    
-    # To improve efficiency, record the SV winners when candidates are removed
-    mem_sv_winners = {_c: None for _c in curr_cands} 
-    
+        
     if len(curr_cands) == 1: 
-        return curr_cands
+        mem_sv_winners[tuple(curr_cands)] = curr_cands
+        return curr_cands, mem_sv_winners
     for m in sorted(margins, reverse=True):
         for a, b in [ab_match for ab_match in matches 
                      if profile.margin(ab_match[0], ab_match[1])  == m]:
             if a not in sv_winners: 
-                if mem_sv_winners[b] is None: 
-                    ws = stable_voting(profile, 
-                                       curr_cands = [c for c in curr_cands if c != b])
-                    mem_sv_winners[b] = ws
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = stable_voting_(profile, 
+                                                        curr_cands = [c for c in curr_cands if c != b],
+                                                        mem_sv_winners = mem_sv_winners)
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
                 else: 
-                    ws = mem_sv_winners[b]
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
                 if a in ws:
                     sv_winners.append(a)
         if len(sv_winners) > 0: 
-            return sorted(sv_winners) 
+            return sorted(sv_winners), mem_sv_winners
+        
+@vm_name("Stable Voting")
+def stable_voting(profile): 
+    '''Implementation of the Stable Voting method from https://arxiv.org/abs/2108.00542'''
+    
+    return stable_voting_(profile, curr_cands = None, mem_sv_winners = {})[0]
 
 
 def display_mg_with_sc(profile): 
@@ -2221,6 +2229,7 @@ all_vms = [
     ranked_pairs_zt,
     ranked_pairs_t,
     iterated_remove_cl,
+    stable_voting,
     daunou,
     blacks
 ]
