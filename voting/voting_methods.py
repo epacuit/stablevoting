@@ -2088,26 +2088,32 @@ def blacks(profile):
         
     return winners
 
+
 @vm_name("Stable Voting")
-def stable_voting(profile): 
+def stable_voting(profile, curr_cands = None): 
     """Stable Voting - implementation of the voting method from https://arxiv.org/abs/2108.00542
     """
+    
+    # curr_cands is the set of candidates who have not been removed
+    curr_cands = curr_cands if not curr_cands is None else profile.candidates
     sv_winners = list()
-    matches = [(a, b) for a in profile.candidates for b in profile.candidates if a != b]
+    
+    matches = [(a, b) for a in curr_cands for b in curr_cands 
+               if a != b]
     margins = list(set([profile.margin(a, b) for a,b in matches]))
     
     # To improve efficiency, record the SV winners when candidates are removed
-    mem_sv_winners = {_c: None for _c in profile.candidates}    
+    mem_sv_winners = {_c: None for _c in curr_cands} 
     
-    if len(profile.candidates) == 1: 
-        return profile.candidates
+    if len(curr_cands) == 1: 
+        return curr_cands
     for m in sorted(margins, reverse=True):
-        for a, b in [ab_match for ab_match in matches if profile.margin(ab_match[0], ab_match[1])  == m]:
+        for a, b in [ab_match for ab_match in matches 
+                     if profile.margin(ab_match[0], ab_match[1])  == m]:
             if a not in sv_winners: 
-                prof_minus, orig_cnames = profile.remove_candidates([b])
                 if mem_sv_winners[b] is None: 
-                    _ws = stable_voting(prof_minus)
-                    ws = [orig_cnames[_w] for _w in _ws]
+                    ws = stable_voting(profile, 
+                                       curr_cands = [c for c in curr_cands if c != b])
                     mem_sv_winners[b] = ws
                 else: 
                     ws = mem_sv_winners[b]
@@ -2115,7 +2121,6 @@ def stable_voting(profile):
                     sv_winners.append(a)
         if len(sv_winners) > 0: 
             return sorted(sv_winners) 
-
 
 
 def display_mg_with_sc(profile): 
