@@ -2188,6 +2188,60 @@ def minimax_scores_mg(mg):
     
     return {c: -max([mg[in_e[0]][in_e[1]]['weight']  for in_e in mg.in_edges(c)]) if len(mg.in_edges(c)) > 0 else 0 for c in mg.nodes}
 
+
+# This code is available in voting/voting_methods.py but is included here for reference. 
+
+def get_margin(mg, a, b): 
+    '''get the margin of a over b in the marging graph mg'''
+    m = 0.0
+    
+    if mg.has_edge(a, b): 
+        m = mg.get_edge_data(a, b)['weight'] 
+    elif mg.has_edge(b, a):
+        m = -1 * mg.get_edge_data(b, a)['weight'] 
+    return m
+
+@vm_name("Stable Voting")
+def stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}): 
+    '''
+    Determine the Stable Voting winners for the margin graph mg while keeping track 
+    of the winners in any subprofiles checked during computation. 
+    '''
+    
+    # curr_cands is the set of candidates who have not been removed
+    curr_cands = curr_cands if not curr_cands is None else mg.nodes 
+    sv_winners = list()
+
+    matches = [(a, b) for a in curr_cands for b in curr_cands 
+               if a != b]
+    margins = list(set([get_margin(mg, a, b) for a,b in matches]))
+    
+    if len(curr_cands) == 1: 
+        mem_sv_winners[tuple(curr_cands)] = curr_cands
+        return curr_cands, mem_sv_winners
+    for m in sorted(margins, reverse=True):
+        for a, b in [ab_match for ab_match in matches 
+                     if get_margin(mg, ab_match[0], ab_match[1]) == m]:
+            if a not in sv_winners: 
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = stable_voting_mg_(mg, 
+                                                           curr_cands = [c for c in curr_cands if c != b],
+                                                           mem_sv_winners = mem_sv_winners )
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
+                else: 
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
+                if a in ws:
+                    sv_winners.append(a)
+        if len(sv_winners) > 0: 
+            return sorted(sv_winners), mem_sv_winners
+                
+@vm_name("Stable Voting")
+def stable_voting_mg(mg): 
+    '''Implementation of the Stable Voting method from https://arxiv.org/abs/2108.00542'''
+    
+    return stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {})[0]
+
 def display_winners(profile, vm): 
     ws = vm(profile)
     winners = ', '.join([profile.cmap[w] for w in ws])
