@@ -1,7 +1,7 @@
 '''
     File: profile_optimized.py
     Author: Eric Pacuit (epacuit@umd.edu)
-    Date: December 7, 2020
+    Date: September 4, 2021
     
     Functions to generate profile
     
@@ -19,6 +19,7 @@ from .profiles import Profile
 import numpy as np # for the SPATIAL model
 import math
 import random
+from scipy.stats import gamma
 
 # ############
 # wrapper functions to interface with preflib tools for generating profiles
@@ -222,10 +223,9 @@ def voter_utility(v_pos, c_pos, beta):
     '''
     return 2 * np.dot(v_pos, c_pos) - beta*(np.linalg.norm(v_pos)**2 + np.linalg.norm(c_pos)**2)
 
-def create_prof_spatial_model(num_voters, cmap, params):
+def create_prof_spatial_model(num_cands, num_voters, params):
     num_dim = params[0] # the first component of the parameter is the number of dimensions
     beta = params[1] # used to define the mixed model: beta = 1 is proximity model (i.e., Euclidean distance)
-    num_cands = len(cmap.keys())  
     mean = [0] * num_dim # mean is 0 for each dimension
     cov = np.diag([1]*num_dim)  # diagonal covariance
     
@@ -249,6 +249,39 @@ def create_prof_spatial_model(num_voters, cmap, params):
     return [rc[0] for rc in prof_counts], [rc[1] for rc in prof_counts]
 
 
+#Given the number m of candidates and a phi\in [0,1] function computes the expected number of swaps in a vote sampled from Mallows model
+def calculateExpectedNumberSwaps(num_candidates,phi):
+    res= phi*num_candidates/(1-phi)
+    for j in range(1,num_candidates+1):
+        res = res + (j*(phi**j))/((phi**j)-1)
+    return res
+
+#Given the number m of candidates and a absolute number of expected swaps exp_abs, this function returns a value of phi such that in a vote sampled from Mallows model with this parameter the expected number of swaps is exp_abs
+def phi_from_relphi(num_candidates,relphi=None):
+    if relphi is None:
+        relphi = np.random.uniform(0.001, 0.999)
+    if relphi==1:
+        return 1
+    exp_abs=relphi*(num_candidates*(num_candidates-1))/4
+    low=0
+    high=1
+    while low <= high:
+        mid = (high + low) / 2
+        cur=calculateExpectedNumberSwaps(num_candidates, mid)
+        if abs(cur-exp_abs)<1e-5:
+            return mid
+        # If x is greater, ignore left half
+        if cur < exp_abs:
+            low = mid
+
+        # If x is smaller, ignore right half
+        elif cur > exp_abs:
+            high = mid
+
+    # If we reach here, then the element was not present
+    return -1
+
+
 # #########
 # functions to generate profiles
 # #########
@@ -257,14 +290,33 @@ def create_prof_spatial_model(num_voters, cmap, params):
 prob_models = {
     "IC": {"func": create_rankings_urn, "param": 0}, # IC model is Mallows with phi=1.0
     "IAC": {"func": create_rankings_urn, "param": 1}, # IAC model is urn with alpha=1
-    "MALLOWS": {"func": create_rankings_mallows, "param": 0.8}, 
-    "MALLOWS_2REF": {"func": create_rankings_mallows_two_rankings, "param": 0.8}, 
-    "URN": {"func": create_rankings_urn, "param": 10},
-    "SinglePeaked": {"func": create_rankings_single_peaked, "param": None},
-    #"SPATIAL": {"func": create_prof_spatial_model, "param": (3, 1.0)},
+    "MALLOWS-0.8": {"func": create_rankings_mallows, "param": 0.8}, 
+    "MALLOWS-0.2": {"func": create_rankings_mallows, "param": 0.2}, 
+    "MALLOWS-R": {"func": create_rankings_mallows, "param": None, "param_fn": lambda nc: np.random.uniform(0.001, 0.999)}, 
+    "MALLOWS-RELPHI-0.4": {"func": create_rankings_mallows, "param": None, "param_fn": lambda nc: phi_from_relphi(nc, 0.4)}, 
+    "MALLOWS-RELPHI-0.375": {"func": create_rankings_mallows, "param": None, "param_fn": lambda nc: phi_from_relphi(nc, 0.375)}, 
+    "MALLOWS-RELPHI-0": {"func": create_rankings_mallows, "param": None, "param_fn": lambda nc: phi_from_relphi(nc, 0)}, 
+    "MALLOWS-RELPHI-1": {"func": create_rankings_mallows, "param": None, "param_fn": lambda nc: phi_from_relphi(nc, 1)}, 
+    "MALLOWS-RELPHI-R": {"func": create_rankings_mallows, "param": None, "param_fn": lambda nc: phi_from_relphi(nc)}, 
+    "MALLOWS-RELPHI-R2": {"func": create_rankings_mallows, "param": None, "param_fn": lambda nc: phi_from_relphi(nc, np.random.uniform(0.001,0.5))}, 
+    "MALLOWS_2REF-RELPHI-R": {"func": create_rankings_mallows_two_rankings, "param": None, "param_fn": lambda nc: phi_from_relphi(nc)}, 
+    "MALLOWS_2REF-RELPHI-R2": {"func": create_rankings_mallows_two_rankings, "param": None, "param_fn": lambda nc: phi_from_relphi(nc, np.random.uniform(0.001,0.5))}, 
+    "URN-10": {"func": create_rankings_urn, "param": 10},
+    "URN-0.1": {"func": create_rankings_urn, "param": None, "param_fn": lambda nc : round(math.factorial(nc) * 0.1)},
+    "URN-0.3": {"func": create_rankings_urn, "param": None, "param_fn": lambda nc : round(math.factorial(nc) * 0.3)},
+    "URN-R": {"func": create_rankings_urn, "param": None, "param_fn": lambda nc : round(math.factorial(nc) * gamma.rvs(0.8))},
+    "SinglePeaked": {"func": create_rankings_single_peaked, "param": None, "param_fn": lambda nc: None},
+    "SPATIAL": {"func": create_prof_spatial_model, "param": (2, 1.0)},
 
 }
 
+
+def get_replacement(num_cands, param): 
+    return int(num_cands * param)
+
+def get_replacement_uniform(num_cands):
+
+    alpha = random.random()
 
 def generate_profile(num_cands, num_voters, probmod="IC", probmod_param=None):
     '''generate a profile with num_cands candidates and num_voters voters using 
@@ -286,9 +338,13 @@ def generate_profile(num_cands, num_voters, probmod="IC", probmod_param=None):
         alternative parameter for the different models (e.g., different dispersion parameter for Mallows)
     '''
     # candidates names must be 0,..., num_cands - 1
+
+
     create_rankings = prob_models[probmod]["func"]
-    probmod_param = prob_models[probmod]["param"] if  probmod_param is None else probmod_param 
+    _probmod_param = prob_models[probmod]["param"] if  probmod_param is None else probmod_param 
     
+    probmod_param = _probmod_param if _probmod_param is not None else prob_models[probmod]["param_fn"](num_cands)
+
     # use preflib tools to generate the rankings
     rankings, rcounts = create_rankings(num_cands, num_voters, probmod_param) 
     
