@@ -1,7 +1,7 @@
 '''
     File: voting_methods.py
     Author: Eric Pacuit (epacuit@umd.edu)
-    Date: December 12, 2020
+    Date: September 26, 2021
     
     Implementations of voting methods
 '''
@@ -1507,8 +1507,6 @@ def split_cycle_mg(mg):
     """
     
     candidates = mg.nodes 
-    
-    
     # find the cycle number for each candidate
     cycle_number = {cs:0 for cs in permutations(candidates,2)}
     for cycle in nx.simple_cycles(mg): # for each cycle in the margin graph
@@ -2089,25 +2087,88 @@ def blacks(profile):
     return winners
 
 
-def stable_voting_(profile, curr_cands = None, mem_sv_winners = {}): 
+def simple_stable_voting_(profile, curr_cands = None, mem_sv_winners = {}): 
     '''
-    Determine the Stable Voting winners for the profile while keeping track 
+    Determine the Simple Stable Voting winners for the profile while keeping track 
     of the winners in any subprofiles checked during computation. 
-    
     '''
     
     # curr_cands is the set of candidates who have not been removed
     curr_cands = curr_cands if not curr_cands is None else profile.candidates
     sv_winners = list()
     
-    matches = [(a, b) for a in curr_cands for b in curr_cands 
-               if a != b]
+    matches = [(a, b) for a in curr_cands for b in curr_cands if a != b]
     margins = list(set([profile.margin(a, b) for a,b in matches]))
         
     if len(curr_cands) == 1: 
         mem_sv_winners[tuple(curr_cands)] = curr_cands
         return curr_cands, mem_sv_winners
     for m in sorted(margins, reverse=True):
+        for a, b in [ab_match for ab_match in matches 
+                     if profile.margin(ab_match[0], ab_match[1])  == m]:
+            if a not in sv_winners: 
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = simple_stable_voting_(profile, 
+                                                               curr_cands = [c for c in curr_cands if c != b],
+                                                               mem_sv_winners = mem_sv_winners)
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
+                else: 
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
+                if a in ws:
+                    sv_winners.append(a)
+        if len(sv_winners) > 0: 
+            return sorted(sv_winners), mem_sv_winners
+        
+@vm_name("Simple Stable Voting")
+def simple_stable_voting(profile): 
+    '''Implementation of the Simple Stable Voting method from https://arxiv.org/abs/2108.00542'''
+    return simple_stable_voting_(profile, curr_cands = None, mem_sv_winners = {})[0]
+
+
+def find_strengths(profile, curr_cands = None):   
+    """
+    A path from candidate a to candidate b is a list of candidates  starting with a and ending with b 
+    such that each candidate in the list beats the next candidate in the list. 
+    The strength of a path is the minimum margin between consecutive candidates in the path 
+    The strength of the pair of candidates (a,b) is strength of the strongest path from a to b.   
+    We find these strengths using the Floyd-Warshall Algorithm.  
+    """
+    curr_cands = curr_cands if curr_cands is not None else profile.candidates
+    mg = [[-np.inf for _ in curr_cands] for _ in curr_cands]
+    
+    for c1_idx,c1 in enumerate(curr_cands):
+        for c2_idx,c2 in enumerate(curr_cands):
+            if (profile.support(c1,c2) > profile.support(c2,c1) or c1 == c2):
+                mg[c1_idx][c2_idx] = profile.support(c1,c2) - profile.support(c2,c1)    
+    strength = list(map(lambda i : list(map(lambda j : j , i)) , mg))
+    for i_idx, i in enumerate(curr_cands):         
+        for j_idx, j in enumerate(curr_cands): 
+            if i!= j:
+                for k_idx, k in enumerate(curr_cands): 
+                    if i!= k and j != k:
+                        strength[j_idx][k_idx] = max(strength[j_idx][k_idx], min(strength[j_idx][i_idx],strength[i_idx][k_idx]))
+    return strength
+
+def stable_voting_(profile, curr_cands = None, mem_sv_winners = {}): 
+    '''
+    Determine the Stable Voting winners for the profile while keeping track 
+    of the winners in any subprofiles checked during computation. 
+    '''
+    
+    # curr_cands is the set of candidates who have not been removed
+    curr_cands = curr_cands if not curr_cands is None else profile.candidates
+    sv_winners = list()
+    
+    matches = [(a, b) for a in curr_cands for b in curr_cands if a != b]    
+    margins = list(set([profile.margin(a, b) for a,b in matches]))
+    nonneg_margins = [m for m in margins if m>=0]
+    neg_margins = [m for m in margins if m < 0]
+    
+    if len(curr_cands) == 1: 
+        mem_sv_winners[tuple(curr_cands)] = curr_cands
+        return curr_cands, mem_sv_winners
+    for m in sorted(nonneg_margins, reverse=True):
         for a, b in [ab_match for ab_match in matches 
                      if profile.margin(ab_match[0], ab_match[1])  == m]:
             if a not in sv_winners: 
@@ -2123,12 +2184,166 @@ def stable_voting_(profile, curr_cands = None, mem_sv_winners = {}):
                     sv_winners.append(a)
         if len(sv_winners) > 0: 
             return sorted(sv_winners), mem_sv_winners
-        
+    
+    strengths = find_strengths(profile, curr_cands)
+    for m in sorted(neg_margins, reverse=True):
+        for a, b in [ab_match for ab_match in matches 
+                     if profile.margin(ab_match[0], ab_match[1])  == m]:
+            if strengths[curr_cands.index(a)][curr_cands.index(b)] >= profile.margin(b, a) and a not in sv_winners: 
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = stable_voting_(profile, 
+                                                        curr_cands = [c for c in curr_cands if c != b],
+                                                        mem_sv_winners = mem_sv_winners)
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
+                else: 
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
+                if a in ws:
+                    sv_winners.append(a)
+        if len(sv_winners) > 0: 
+            return sorted(sv_winners), mem_sv_winners
+                
 @vm_name("Stable Voting")
 def stable_voting(profile): 
-    '''Implementation of the Stable Voting method from https://arxiv.org/abs/2108.00542'''
-    
+    '''Implementation of the Simple Stable Voting method from https://arxiv.org/abs/2108.00542'''
     return stable_voting_(profile, curr_cands = None, mem_sv_winners = {})[0]
+
+@vm_name("Stable Voting Faster")
+def stable_voting_faster(profile): 
+    '''First check if there is a Condorcet winner.  If so, return the Condorcet winner, otherwise 
+    find the stable voting winnner using stable_voting_'''
+    
+    cw = profile.condorcet_winner()
+    if cw is not None: 
+        return [cw]
+    else: 
+        return stable_voting_(profile, curr_cands = None, mem_sv_winners = {})[0]
+
+# (Simple) Stable Voting for margin graphs
+
+def simple_stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}): 
+    '''
+    Determine the Simple Stable Voting winners for the margin graph mg while keeping track 
+    of the winners in any subprofiles checked during computation. 
+    '''
+    
+    # curr_cands is the set of candidates who have not been removed
+    curr_cands = curr_cands if not curr_cands is None else mg.nodes 
+    sv_winners = list()
+
+    matches = [(a, b) for a in curr_cands for b in curr_cands if a != b]
+    margins = list(set([get_margin(mg, a, b) for a,b in matches]))
+    
+    if len(curr_cands) == 1: 
+        mem_sv_winners[tuple(curr_cands)] = curr_cands
+        return curr_cands, mem_sv_winners
+    for m in sorted(margins, reverse=True):
+        for a, b in [ab_match for ab_match in matches 
+                     if get_margin(mg, ab_match[0], ab_match[1]) == m]:
+            if a not in sv_winners: 
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = simple_stable_voting_mg_(mg, 
+                                                                  curr_cands = [c for c in curr_cands if c != b],
+                                                                  mem_sv_winners = mem_sv_winners )
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
+                else: 
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
+                if a in ws:
+                    sv_winners.append(a)
+        if len(sv_winners) > 0: 
+            return sorted(sv_winners), mem_sv_winners
+                
+@vm_name("Simple Stable Voting")
+def simple_stable_voting_mg(mg): 
+    
+    return simple_stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {})[0]
+
+
+def find_strengths_mg(mg, curr_cands = None):   
+    """
+    A path from candidate a to candidate b is a list of candidates  starting with a and ending with b 
+    such that each candidate in the list beats the next candidate in the list. 
+    The strength of a path is the minimum margin between consecutive candidates in the path 
+    The strength of the pair of candidates (a,b) is strength of the strongest path from a to b.   
+    We find these strengths using the Floyd-Warshall Algorithm.  
+
+    """
+    curr_cands = curr_cands if curr_cands is not None else mg.nodes
+    margin_matrix = [[-np.inf for _ in curr_cands] for _ in curr_cands]
+    
+    # Weak Condorcet winners are Split Cycle winners
+    for c1_idx,c1 in enumerate(curr_cands):
+        for c2_idx,c2 in enumerate(curr_cands):
+            if get_margin(mg, c1, c2) > 0 or c1 == c2:
+                margin_matrix[c1_idx][c2_idx] = get_margin(mg, c1, c2)
+
+    strength = list(map(lambda i : list(map(lambda j : j , i)) , margin_matrix))
+    for i_idx, i in enumerate(curr_cands):         
+        for j_idx, j in enumerate(curr_cands): 
+            if i!= j:
+                for k_idx, k in enumerate(curr_cands): 
+                    if i!= k and j != k:
+                        strength[j_idx][k_idx] = max(strength[j_idx][k_idx], min(strength[j_idx][i_idx],strength[i_idx][k_idx]))
+    return strength
+
+def stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}): 
+    '''
+    Determine the Simple Stable Voting winners for the margin graph mg while keeping track 
+    of the winners in any subprofiles checked during computation. 
+    '''
+    
+    # curr_cands is the set of candidates who have not been removed
+    curr_cands = curr_cands if not curr_cands is None else list(mg.nodes)
+    sv_winners = list()
+
+    matches = [(a, b) for a in curr_cands for b in curr_cands if a != b]
+    margins = list(set([get_margin(mg, a, b) for a,b in matches]))
+    nonneg_margins = [m for m in margins if m >= 0]
+    neg_margins = [m for m in margins if m < 0]
+    if len(curr_cands) == 1: 
+        mem_sv_winners[tuple(curr_cands)] = curr_cands
+        return curr_cands, mem_sv_winners
+    for m in sorted(nonneg_margins, reverse=True):
+        for a, b in [ab_match for ab_match in matches 
+                     if get_margin(mg, ab_match[0], ab_match[1]) == m]:
+            if a not in sv_winners: 
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = stable_voting_mg_(mg, 
+                                                           curr_cands = [c for c in curr_cands if c != b],
+                                                           mem_sv_winners = mem_sv_winners )
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
+                else: 
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
+                if a in ws:
+                    sv_winners.append(a)
+        if len(sv_winners) > 0: 
+            return sorted(sv_winners), mem_sv_winners
+        
+    strengths = find_strengths_mg(mg, curr_cands)
+    for m in sorted(neg_margins, reverse=True): 
+        
+        for a, b in [ab_match for ab_match in matches 
+                     if get_margin(mg, ab_match[0], ab_match[1]) == m]:
+            if strengths[curr_cands.index(a)][curr_cands.index(b)] >= get_margin(mg, b, a) and a not in sv_winners: 
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = stable_voting_mg_(mg, 
+                                                           curr_cands = [c for c in curr_cands if c != b],
+                                                           mem_sv_winners = mem_sv_winners )
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
+                else: 
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
+                if a in ws:
+                    sv_winners.append(a)
+        if len(sv_winners) > 0: 
+            return sorted(sv_winners), mem_sv_winners
+            
+@vm_name("Stable Voting")
+def stable_voting_mg(mg): 
+    
+    return stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {})[0]
 
 
 def display_mg_with_sc(profile): 
@@ -2284,6 +2499,8 @@ all_vms = [
     ranked_pairs_t,
     iterated_remove_cl,
     stable_voting,
+    simple_stable_voting,
+    stable_voting_faster,
     daunou,
     blacks
 ]
@@ -2297,7 +2514,12 @@ all_vms_mg = [
     uc_bordes_mg, 
     uc_mckelvey,
     getcha_mg,
-    gocha_mg
+    gocha_mg,
+    stable_voting_mg,
+    simple_stable_voting_mg,
+    split_cycle_mg,
+    beat_path_faster_mg,
+    split_cycle_faster_mg
 ]
 
     
