@@ -2135,7 +2135,7 @@ def find_strengths(profile, curr_cands = None):
     We find these strengths using the Floyd-Warshall Algorithm.  
     """
     curr_cands = curr_cands if curr_cands is not None else profile.candidates
-    mg = [[-np.inf for _ in curr_cands] for _ in curr_cands]
+    mg = [[0 for _ in curr_cands] for _ in curr_cands]
     
     for c1_idx,c1 in enumerate(curr_cands):
         for c2_idx,c2 in enumerate(curr_cands):
@@ -2270,7 +2270,7 @@ def find_strengths_mg(mg, curr_cands = None):
 
     """
     curr_cands = curr_cands if curr_cands is not None else mg.nodes
-    margin_matrix = [[-np.inf for _ in curr_cands] for _ in curr_cands]
+    margin_matrix = [[0 for _ in curr_cands] for _ in curr_cands]
     
     # Weak Condorcet winners are Split Cycle winners
     for c1_idx,c1 in enumerate(curr_cands):
