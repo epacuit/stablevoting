@@ -9,7 +9,7 @@ tl;dr: An overview of profiles and voting methods is found in 01-Profiles.ipynb 
 
 ## Dev Notes
 
-* In order to optimize some of the code for reasoning about profiles within linear orders, it is assumed that in any profile the candidates are named by the initial segment of the non-negative integers.  So, in a profile with 5 candidates, the candidate names are "0, 1, 2, 3, and 4".   Use the `cmap` variable for different candidate names: `cmap` is a dictionary with keys 0, 1, ..., num_cands - 1 and values the "real" names of the candidates.  
+* In order to optimize some of the code for reasoning about profiles with linear orders, it is assumed that in any profile the candidates are named by the initial segment of the non-negative integers.  So, in a profile with 5 candidates, the candidate names are "0, 1, 2, 3, and 4".   Use the `cmap` variable for different candidate names: `cmap` is a dictionary with keys 0, 1, ..., num_cands - 1 and values the "real" names of the candidates.  
 
 ## Notebooks
 
