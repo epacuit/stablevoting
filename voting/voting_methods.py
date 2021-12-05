@@ -1076,6 +1076,19 @@ def condorcet_mg(mg):
     cond_winner = find_condorcet_winner(mg)
     return cond_winner if len(cond_winner) > 0 else sorted(mg.nodes)
 
+def copeland_scores_prof(prof, alpha=0.5):
+    """Copeland alpha score of candidate c is: 1 point for every candidate c2 that c is majority 
+    preferred to and alpha points for every candidate that c is tied with."""
+
+    mg = prof.margin_graph()
+    c_scores = {c: 0.0 for c in mg.nodes}
+    for c in mg.nodes:
+        for c2 in mg.nodes:
+            if c != c2 and is_majority_preferred(mg, c, c2):
+                c_scores[c] += 1.0
+            if c != c2 and is_tied(mg, c, c2): 
+                c_scores[c] += alpha
+    return c_scores
 
 
 @vm_name("Copeland")
@@ -2478,7 +2491,6 @@ def minimax_scores_mg(mg):
     return {c: -max([mg[in_e[0]][in_e[1]]['weight']  for in_e in mg.in_edges(c)]) if len(mg.in_edges(c)) > 0 else 0 for c in mg.nodes}
 
 
-# This code is available in voting/voting_methods.py but is included here for reference. 
 
 def get_margin(mg, a, b): 
     '''get the margin of a over b in the marging graph mg'''
@@ -2490,10 +2502,9 @@ def get_margin(mg, a, b):
         m = -1 * mg.get_edge_data(b, a)['weight'] 
     return m
 
-@vm_name("Stable Voting")
-def stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}): 
+def simple_stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}): 
     '''
-    Determine the Stable Voting winners for the margin graph mg while keeping track 
+    Determine the Simple Stable Voting winners for the margin graph mg while keeping track 
     of the winners in any subprofiles checked during computation. 
     '''
     
@@ -2501,8 +2512,83 @@ def stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}):
     curr_cands = curr_cands if not curr_cands is None else mg.nodes 
     sv_winners = list()
 
-    matches = [(a, b) for a in curr_cands for b in curr_cands 
-               if a != b]
+    matches = [(a, b) for a in curr_cands for b in curr_cands if a != b]
+    margins = list(set([get_margin(mg, a, b) for a,b in matches]))
+    
+    if len(curr_cands) == 1: 
+        mem_sv_winners[tuple(curr_cands)] = curr_cands
+        return curr_cands, mem_sv_winners
+    for m in sorted(margins, reverse=True):
+        for a, b in [ab_match for ab_match in matches 
+                     if get_margin(mg, ab_match[0], ab_match[1]) == m]:
+            if a not in sv_winners: 
+                cands_minus_b = sorted([c for c in curr_cands if c!= b])
+                if tuple(cands_minus_b) not in mem_sv_winners.keys(): 
+                    ws, mem_sv_winners = simple_stable_voting_mg_(mg, 
+                                                                  curr_cands = [c for c in curr_cands if c != b],
+                                                                  mem_sv_winners = mem_sv_winners )
+                    mem_sv_winners[tuple(cands_minus_b)] = ws
+                else: 
+                    ws = mem_sv_winners[tuple(cands_minus_b)]
+                if a in ws:
+                    sv_winners.append(a)
+        if len(sv_winners) > 0: 
+            return sorted(sv_winners), mem_sv_winners
+                
+@vm_name("Simple Stable Voting")
+def simple_stable_voting_mg(mg): 
+    
+    return simple_stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {})[0]
+
+def find_undefeated_candidates_mg(mg, curr_cands = None):   
+    """
+    A path from candidate a to candidate b is a list of candidates starting with a and ending with b 
+    such that each candidate in the list has a nonzero margin vs. the next candidate in the list. 
+    The strength of a path is the minimum margin between consecutive candidates in the path 
+    The strength of the pair of candidates (a,b) is strength of the strongest path from a to b.   
+    We find these strengths using the Floyd-Warshall Algorithm.   
+    
+    A candidate c is undefeated if for all candidates d that is majority preferred to d, 
+    the margin of c over d is greater than the strength of d to c. 
+    
+    Note that this is an implementation of the Split Cycle voting method. 
+    """
+    curr_cands = curr_cands if curr_cands is not None else mg.nodes
+    margin_matrix = [[-np.inf for _ in curr_cands] for _ in curr_cands]
+    
+    for c1_idx,c1 in enumerate(curr_cands):
+        for c2_idx,c2 in enumerate(curr_cands):
+            if get_margin(mg, c1, c2) > 0 or c1 == c2:
+                margin_matrix[c1_idx][c2_idx] = get_margin(mg, c1, c2)
+
+    strength = list(map(lambda i : list(map(lambda j : j , i)) , margin_matrix))
+    for i_idx, i in enumerate(curr_cands):         
+        for j_idx, j in enumerate(curr_cands): 
+            if i!= j:
+                for k_idx, k in enumerate(curr_cands): 
+                    if i!= k and j != k:
+                        strength[j_idx][k_idx] = max(strength[j_idx][k_idx], min(strength[j_idx][i_idx],strength[i_idx][k_idx]))
+
+    undefeated = {i:True for i in curr_cands}
+    for i_idx, i in enumerate(curr_cands): 
+        for j_idx,j in enumerate(curr_cands):
+            if i!=j:
+                if margin_matrix[j_idx][i_idx] > strength[i_idx][j_idx]: # the main difference with Beat Path
+                    undefeated[i] = False
+    return sorted([c for c in curr_cands if undefeated[c]])
+
+def stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}): 
+    '''
+    Determine the Simple Stable Voting winners for the margin graph mg while keeping track 
+    of the winners in any subprofiles checked during computation. 
+    '''
+    
+    # curr_cands is the set of candidates who have not been removed
+    curr_cands = curr_cands if not curr_cands is None else mg.nodes 
+    sv_winners = list()
+
+    undefeated_candidates = find_undefeated_candidates_mg(mg, curr_cands = curr_cands)
+    matches = [(a, b) for a in curr_cands for b in curr_cands if a != b if a in undefeated_candidates]
     margins = list(set([get_margin(mg, a, b) for a,b in matches]))
     
     if len(curr_cands) == 1: 
@@ -2527,7 +2613,6 @@ def stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {}):
                 
 @vm_name("Stable Voting")
 def stable_voting_mg(mg): 
-    '''Implementation of the Stable Voting method from https://arxiv.org/abs/2108.00542'''
     
     return stable_voting_mg_(mg, curr_cands = None, mem_sv_winners = {})[0]
 
