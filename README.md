@@ -23,7 +23,7 @@ tl;dr: An overview of profiles and voting methods is found in 01-Profiles.ipynb 
 
 5. 05-AnalyzingElectionData.ipynb: Read and find the winnners in real elections from preflib.org (the election data is available in preflib-data/). 
 
-6. 06-RunningTimes.ipynb: Graphs comparing the running times of Simple Stabel Voting and Stable Voting. 
+6. 06-RunningTimes.ipynb: Graphs comparing the running times of Simple Stable Voting and Stable Voting. 
 
 ## Profiles and Voting Methods
 
