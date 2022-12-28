@@ -7,9 +7,9 @@ The notebooks use the Python package ``pref_voting``.   Consult [https://pref-vo
 
 ## Notebooks
 
-* 01-StableVotingExamples.ipynb: This notebook is the main notebook discussing Simple Stable Voting and Stable Voting, including all the examples from the papers.   
+* 01-StableVoting.ipynb: This notebook contains the code to run Simple Stable Voting and Stable Voting, and some illustrative examples not discussed in the paper. 
 
-* 02-AnalyzingElectionData.ipynb: Read and find the winnners in real elections from preflib.org (the election data is available in preflib-data/). 
+* 02-StableVotingExamples.ipynb: This notebook discusses the examples from the paper, including the real elections (the ballots for these elections is available and find the winnners in real elections from preflib.org (the election data is available in preflib-data/). 
 
 * 03-RunningTimes.ipynb: Graphs comparing the running times of Simple Stable Voting and Stable Voting. 
 
@@ -25,7 +25,7 @@ The notebooks use the Python package ``pref_voting``.   Consult [https://pref-vo
 
 All the code is written in Python 3. 
 
-- [Preferential Voting Tools](https://pref-voting.readthedocs.io/en/latest/)
+- [pref_voting: Preferential Voting Tools](https://pref-voting.readthedocs.io/en/latest/)
 - The notebooks and the pref_voting library is built around a full SciPy stack: [MatPlotLib](https://matplotlib.org/), [Numpy](https://numpy.org/), [Pandas](https://pandas.pydata.org/), [numba](http://numba.pydata.org/), [networkx](https://networkx.org/), and [tabulate](https://github.com/astanin/python-tabulate)
 - [tqdm.notebook](https://github.com/tqdm/tqdm)
 - [seaborn](https://seaborn.pydata.org/)  
