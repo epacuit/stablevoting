@@ -1,0 +1,10 @@
+num_cands,num_voters,num_profiles,vm,perc_monotonicity_violation
+6,4,100,Instant Runoff PUT,0.0
+6,4,100,Smith IRV PUT,0.0
+6,4,100,Stable Voting,0.0
+6,5,100,Instant Runoff PUT,0.0
+6,5,100,Smith IRV PUT,0.06
+6,5,100,Stable Voting,0.0
+6,10,100,Instant Runoff PUT,0.06
+6,10,100,Smith IRV PUT,0.02
+6,10,100,Stable Voting,0.0
