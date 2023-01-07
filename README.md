@@ -13,6 +13,7 @@ The notebooks use the Python package ``pref_voting``.   Consult [https://pref-vo
 
 * 03-RunningTimes.ipynb: Graphs comparing the running times of Simple Stable Voting and Stable Voting. 
 
+* 04-StableVoting_Julia.ipynb: An implementation of Stable Voting and other voting methods mentioned in the paper in Julia used to produce the irresoluteness and monotonicity violations graphs. 
 
 
 ## Other Files/Directories
