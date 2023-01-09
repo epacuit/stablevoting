@@ -24,7 +24,7 @@ The notebooks use the Python package ``pref_voting``.   Consult [https://pref-vo
 
 ## Requirements
 
-All the code is written in Python 3. 
+The code for notebooks 01-03 is written in Python 3. The code for notebook 04 is written in Julia.
 
 - [pref_voting: Preferential Voting Tools](https://pref-voting.readthedocs.io/en/latest/)
 - The notebooks and the pref_voting library is built around a full SciPy stack: [MatPlotLib](https://matplotlib.org/), [Numpy](https://numpy.org/), [Pandas](https://pandas.pydata.org/), [numba](http://numba.pydata.org/), [networkx](https://networkx.org/), and [tabulate](https://github.com/astanin/python-tabulate)
