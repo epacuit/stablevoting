@@ -1,0 +1,25 @@
+num_cands,num_voters,perc_mon_violation,vm
+6,4,0.01734,Smith IRV
+6,4,0.0,Instant Runoff
+6,4,0.0,Stable Voting
+6,5,0.04972,Smith IRV
+6,5,0.00804,Instant Runoff
+6,5,0.00022,Stable Voting
+6,10,0.05748,Smith IRV
+6,10,0.05102,Instant Runoff
+6,10,0.00224,Stable Voting
+6,11,0.0532,Smith IRV
+6,11,0.09692,Instant Runoff
+6,11,0.0018,Stable Voting
+6,20,0.14878,Smith IRV
+6,20,0.2021,Instant Runoff
+6,20,0.00306,Stable Voting
+6,21,0.16314,Smith IRV
+6,21,0.34026,Instant Runoff
+6,21,0.00212,Stable Voting
+6,50,0.14376,Smith IRV
+6,50,0.21464,Instant Runoff
+6,50,0.00218,Stable Voting
+6,51,0.12802,Smith IRV
+6,51,0.25548,Instant Runoff
+6,51,0.00164,Stable Voting
