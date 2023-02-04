@@ -15,12 +15,14 @@ The notebooks use the Python package ``pref_voting``.   Consult [https://pref-vo
 
 * 04-StableVoting_Julia.ipynb: An implementation of Stable Voting and other voting methods mentioned in the paper in Julia used to produce the irresoluteness and monotonicity violations graphs. 
 
+* 05-CreateGraphs.ipynb: An implementation of Stable Voting and other voting methods mentioned in the paper in Julia used to produce the irresoluteness and monotonicity violations graphs. 
+
 
 ## Other Files/Directories
 
 1. preflib-data/: Data from preflib.org of actual elections discussed in the paper. 
 
-2. data/: CSV files containing data for the graphs comparing the running times of Simple Stable Voting and Stable Voting. 
+2. data/: CSV files containing data for the percent multiple winner graphs, monotonicity violation graphs, and the graphs comparing the running times of Simple Stable Voting and Stable Voting. 
 
 ## Requirements
 
@@ -32,10 +34,3 @@ The code for notebooks 01-03 is written in Python 3. The code for notebook 04 is
 - [seaborn](https://seaborn.pydata.org/)  
 - [multiprocess](https://pypi.org/project/multiprocess/) (only needed if running the simulations in  05-ProbabilisticStabilityWinners.ipynb) 
 - [PrefLibTools](https://github.com/PrefLib/preflibtools) (for analyzing the elections)
-
-
- 
-
-```python
-
-```
